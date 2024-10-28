@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  foo_db:
+    image: postgres:14.7
+    container_name: foo_db
+    environment:
+      POSTGRES_USER: pete
+      POSTGRES_PASSWORD: devops
+      POSTGRES_DB: foo
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./misc/snapshot-prod-data.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - foo_network
+
+  foo_app:
+    image: carcyy/assignment2app:1.0.0
+    container_name: foo_app
+    depends_on:
+      - foo_db
+    environment:
+      PORT: 3001
+      DB_HOSTNAME: foo_db
+      DB_PORT: 5432
+      DB_USERNAME: pete
+      DB_PASSWORD: devops
+    ports:
+      - "80:3001"
+    networks:
+      - foo_network
+
+networks:
+  foo_network:
+    driver: bridge

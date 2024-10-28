@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foo App - List of Foos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        b {
+            color: #007BFF;
+        }
+        a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+        hr {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Foo App - List of Foos</h1>
+    <ul>
+        <% if (foos && foos.length > 0) { %>
+            <% foos.forEach(function(item) { %>
+                <li>
+                    <b>Name:</b> <%= item.name %>, <b>Height:</b> <%= item.height %>
+                </li>
+            <% }) %>
+        <% } else { %>
+            <p>No foos found.</p>
+        <% } %>
+    </ul>
+    <hr />
+    <p>Click <a href="/">here</a> to go back to the home page.</p>
+</body>
+</html>

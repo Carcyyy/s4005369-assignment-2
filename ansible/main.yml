@@ -1,0 +1,77 @@
+---
+- name: Configure Application Servers
+  hosts: app_servers
+  become: yes
+  vars:
+    db_private_ip: "{{ db_private_ip }}" 
+
+  tasks:
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Clean up Docker containers
+      shell: |
+        docker stop $(docker ps -a -q) || true
+        docker system prune -f
+      ignore_errors: yes  
+
+    - name: Deploy the Foo App container
+      command: >
+        docker run --name foo_app --add-host host.docker.internal:host-gateway
+        -e PORT=3001 -e DB_HOST={{ db_private_ip }} -e DB_PORT=5432
+        -e DB_USER=carcy -e DB_PASS=carcyy  #
+        -p 80:3001 -d carcyy/assignment2app:1.0.0  # Customized with your DockerHub username
+
+- name: Configure Database Server
+  hosts: db_server
+  become: yes
+
+  tasks:
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Deploy the PostgreSQL container
+      command: >
+        docker run --name foo_db -e POSTGRES_PASSWORD=carcyy
+        -e POSTGRES_USER=carcy -e POSTGRES_DB=foo
+        -p 5432:5432
+        -v "$PWD"/misc/snapshot-prod-data.sql:/docker-entrypoint-initdb.d/init.sql
+        -d postgres:14.7

@@ -1,0 +1,79 @@
+name: 'Deploy Foo App'
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.TF_USER_AWS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_USER_AWS_SECRET }}
+  REGION: "us-east-1"
+
+jobs:
+  deploy_app:
+    name: "Deploy Foo App"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.2.9"
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ env.REGION }}
+          aws-access-key-id: ${{ secrets.TF_USER_AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.TF_USER_AWS_SECRET }}
+
+      - name: Set up SSH private key
+        run: |
+          echo "${{ secrets.TF_SSH_KEY }}" > private.key
+          chmod 600 private.key
+        shell: bash
+
+      - name: Initialize Terraform
+        run: |
+          cd terraform/ec2/
+          terraform init
+
+      - name: Check Terraform plan
+        id: check
+        run: |
+          cd terraform/ec2/
+          terraform plan -out=tfplan
+          if grep -q "No changes." tfplan; then
+            echo "No changes found, stopping job"
+            exit 1
+          fi
+
+      - name: Apply Terraform
+        if: steps.check.outcome != 'failure'  # Only apply if there are changes
+        run: |
+          cd terraform/ec2/
+          terraform apply -auto-approve
+
+      - name: Set up Ansible playbooks and deploy
+        run: |
+          chmod +x ansible/manage_ansible.sh
+          ./ansible/manage_ansible.sh
+
+      - name: Clean up SSH key
+        run: |
+          rm -f private.key
+
+      - name: Output application URL
+        run: |
+          cd terraform/ec2/
+          echo "The app is now being hosted on the following URL: $(terraform output -raw load_balancer_dns)"
